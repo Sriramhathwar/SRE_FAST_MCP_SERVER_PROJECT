@@ -1,0 +1,5 @@
+Pod CrashLoopBackOff:
+
+1. Check logs: kubectl logs <pod>
+2. Check memory limits
+3. Restart pod

@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+flask
+flask-cors
+requests
+sentence-transformers
+faiss-cpu
+llama-cpp-python
+fastmcp
