@@ -3,6 +3,7 @@ from mcp_server.tools.prometheus_tool import prometheus_tool
 from mcp_server.tools.logs_tool import logs_tool
 from mcp_server.tools.runbook_tool import runbook_tool
 import psutil
+import requests, os
 import socket
 import ssl
 from datetime import datetime
@@ -124,6 +125,52 @@ def run_command(command: str) -> str:
 
     return result
 
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+
+
+
+HEADERS = {
+    "Authorization": f"Bearer {GITHUB_TOKEN}",
+    "Accept": "application/vnd.github+json"
+}
+@mcp.tool()
+def list_repos(username: str) -> str:
+    """
+    List public repositories of a GitHub user.
+    """
+
+    try:
+        url = f"https://api.github.com/users/{username}/repos"
+
+        response = requests.get(
+            url,
+            headers=HEADERS,
+            timeout=10
+        )
+
+        if response.status_code != 200:
+            return f"GitHub API Error: {response.text}"
+
+        repos = response.json()
+
+        if not repos:
+            return "No repositories found."
+
+        repo_names = [
+            repo["name"]
+            for repo in repos
+        ]
+
+        return "\n".join(repo_names)
+
+    except requests.exceptions.Timeout:
+        return "Request timed out."
+
+    except Exception as e:
+        return f"Error: {str(e)}"
+
 
 if __name__ == "__main__":
+    print("Token: ")
+    print(os.getenv("GITHUB_TOKEN"))
     mcp.run()
