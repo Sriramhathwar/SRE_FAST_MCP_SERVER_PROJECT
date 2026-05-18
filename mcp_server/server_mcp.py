@@ -169,6 +169,137 @@ def list_repos(username: str) -> str:
     except Exception as e:
         return f"Error: {str(e)}"
 
+@mcp.tool()
+def get_recent_commits(owner: str, repo: str) -> str:
+    """
+    Get recent commits from a GitHub repository.
+    """
+
+    try:
+
+        url = f"https://api.github.com/repos/{owner}/{repo}/commits"
+
+        response = requests.get(
+            url,
+            headers=HEADERS,
+            timeout=10
+        )
+
+        if response.status_code != 200:
+            return f"GitHub API Error: {response.text}"
+
+        commits = response.json()
+
+        if not commits:
+            return "No commits found."
+
+        output = []
+
+        for commit in commits[:5]:
+
+            commit_info = f"""
+Author: {commit['commit']['author']['name']}
+Message: {commit['commit']['message']}
+Date: {commit['commit']['author']['date']}
+Commit URL: {commit['html_url']}
+"""
+
+            output.append(commit_info)
+
+        return "\n".join(output)
+
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+
+JENKINS_URL = os.getenv("JENKINS_URL")
+JENKINS_USER = os.getenv("JENKINS_USER")
+JENKINS_TOKEN = os.getenv("JENKINS_TOKEN")
+
+@mcp.tool()
+def list_jenkins_jobs() -> str:
+    """
+    List Jenkins jobs.
+    """
+
+    try:
+
+        url = f"{JENKINS_URL}/api/json"
+
+        response = requests.get(
+            url,
+            auth=(JENKINS_USER, JENKINS_TOKEN),
+            timeout=10
+        )
+
+        if response.status_code != 200:
+            return f"Error: {response.text}"
+
+        data = response.json()
+
+        jobs = data.get("jobs", [])
+
+        if not jobs:
+            return "No Jenkins jobs found."
+
+        output = []
+
+        for job in jobs:
+            output.append(
+                f"Job: {job['name']}"
+            )
+
+        return "\n".join(output)
+
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+@mcp.tool()
+def trigger_build(
+    job_name: str,
+    username: str,
+    run_tests: bool,
+    env: str
+) -> str:
+    """
+    Trigger parameterized Jenkins build.
+    """
+
+    try:
+
+        url = f"{JENKINS_URL}/job/{job_name}/buildWithParameters"
+
+        params = {
+            "USERNAME": username,
+            "RUN_TESTS": str(run_tests).lower(),
+            "ENV": env
+        }
+
+        response = requests.post(
+            url,
+            auth=(JENKINS_USER, JENKINS_TOKEN),
+            params=params,
+            timeout=10
+        )
+
+        if response.status_code in [200, 201]:
+            return (
+                f"Build triggered successfully.\n"
+                f"Job: {job_name}\n"
+                f"USERNAME: {username}\n"
+                f"RUN_TESTS: {run_tests}\n"
+                f"ENV: {env}"
+            )
+
+        return (
+            f"Failed to trigger build.\n"
+            f"Status Code: {response.status_code}\n"
+            f"Response: {response.text}"
+        )
+
+    except Exception as e:
+        return f"Error: {str(e)}"
+
 
 if __name__ == "__main__":
     print("Token: ")
