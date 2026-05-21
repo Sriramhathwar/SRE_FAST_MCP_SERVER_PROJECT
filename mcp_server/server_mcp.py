@@ -300,8 +300,50 @@ def trigger_build(
     except Exception as e:
         return f"Error: {str(e)}"
 
+@mcp.tool()
+def get_console_logs(job_name: str) -> str:
+    """
+    Get latest Jenkins build console logs.
+    """
+
+    try:
+
+        url = (
+            f"{JENKINS_URL}/job/"
+            f"{job_name}/lastBuild/consoleText"
+        )
+
+        response = requests.get(
+            url,
+            auth=(JENKINS_USER, JENKINS_TOKEN),
+            timeout=20
+        )
+
+        if response.status_code != 200:
+            return (
+                f"Failed to fetch logs.\n"
+                f"Status: {response.status_code}\n"
+                f"Response: {response.text}"
+            )
+
+        logs = response.text
+
+        if not logs.strip():
+            return "No console logs found."
+
+        # Limit huge logs
+        max_chars = 8000
+
+        if len(logs) > max_chars:
+            logs = logs[-max_chars:]
+
+        return logs
+
+    except Exception as e:
+        return f"Error: {str(e)}"
+
 
 if __name__ == "__main__":
     print("Token: ")
-    print(os.getenv("GITHUB_TOKEN"))
+    # print(os.getenv("GITHUB_TOKEN"))
     mcp.run()
