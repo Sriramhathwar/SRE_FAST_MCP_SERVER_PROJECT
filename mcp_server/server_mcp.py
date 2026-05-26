@@ -1,15 +1,42 @@
+import sys
+print("STEP 1", file=sys.stderr, flush=True)
 from mcp.server.fastmcp import FastMCP
+print("STEP 2", file=sys.stderr,flush=True)
 from mcp_server.tools.prometheus_tool import prometheus_tool
+print("STEP 3", file=sys.stderr,flush=True)
 from mcp_server.tools.logs_tool import logs_tool
+print("STEP 4", file=sys.stderr,flush=True)
 from mcp_server.tools.runbook_tool import runbook_tool
+print("STEP 5", file=sys.stderr,flush=True)
 import psutil
 import requests, os
 import socket
 import ssl
 from datetime import datetime
 import subprocess
+import json
 
 mcp = FastMCP("Observability Server")
+
+def run_cmd(cmd):
+
+    result = subprocess.run(
+
+        cmd,
+
+        shell=True,
+
+        capture_output=True,
+
+        text=True
+
+    )
+
+    if result.returncode != 0:
+
+        return result.stderr
+
+    return result.stdout
 
 @mcp.tool()
 def metrics(query: str) -> str:
@@ -341,6 +368,252 @@ def get_console_logs(job_name: str) -> str:
 
     except Exception as e:
         return f"Error: {str(e)}"
+
+@mcp.tool()
+def list_gcp_vms() -> str:
+    """
+    List GCP VM instances.
+    """
+
+    try:
+
+        result = subprocess.check_output(
+            [
+                "gcloud",
+                "compute",
+                "instances",
+                "list"
+            ],
+            text=True,
+            timeout=20
+        )
+
+        return result
+
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+@mcp.tool()
+
+def get_projects() -> str:
+
+    """
+
+    Get list of GCP projects.
+
+    """
+
+    cmd = "gcloud projects list --format=json"
+
+    output = run_cmd(cmd)
+
+    try:
+
+        projects = json.loads(output)
+
+        formatted = []
+
+        for p in projects:
+
+            formatted.append(
+
+                f"Project ID: {p.get('projectId')} | "
+
+                f"Name: {p.get('name')}"
+
+            )
+
+        return "\n".join(formatted)
+
+    except Exception as e:
+
+        return str(e)
+    
+@mcp.tool()
+
+def get_service_accounts(project_id: str) -> str:
+
+    """
+
+    Get service accounts for a project.
+
+    """
+
+    cmd = f"""
+
+    gcloud iam service-accounts list
+
+    --project={project_id}
+
+    --format=json
+
+    """
+
+    output = run_cmd(cmd)
+
+    try:
+
+        accounts = json.loads(output)
+
+        formatted = []
+
+        for sa in accounts:
+
+            formatted.append(
+
+                f"Email: {sa.get('email')}"
+
+            )
+
+        return "\n".join(formatted)
+
+    except Exception as e:
+
+        return str(e)
+    
+@mcp.tool()
+
+def get_gcs_buckets(project_id: str) -> str:
+
+    """
+
+    Get GCS bucket list.
+
+    """
+
+    cmd = f"""
+
+    gcloud storage buckets list
+
+    --project={project_id}
+
+    --format=json
+
+    """
+
+    output = run_cmd(cmd)
+
+    try:
+
+        buckets = json.loads(output)
+
+        formatted = []
+
+        for bucket in buckets:
+
+            formatted.append(
+
+                f"Bucket: {bucket.get('name')}"
+
+            )
+
+        return "\n".join(formatted)
+
+    except Exception as e:
+
+        return str(e)
+    
+# ---------------------------------------------------
+
+# Get VPC Networks
+
+# ---------------------------------------------------
+
+@mcp.tool()
+
+def get_vpcs(project_id: str) -> str:
+
+    """
+
+    Get VPC network list.
+
+    """
+
+    cmd = f"""
+
+    gcloud compute networks list
+
+    --project={project_id}
+
+    --format=json
+
+    """
+
+    output = run_cmd(cmd)
+
+    try:
+
+        networks = json.loads(output)
+
+        formatted = []
+
+        for net in networks:
+
+            formatted.append(
+
+                f"VPC: {net.get('name')}"
+
+            )
+
+        return "\n".join(formatted)
+
+    except Exception as e:
+
+        return str(e)
+    
+# ---------------------------------------------------
+
+# Get Subnets
+
+# ---------------------------------------------------
+
+@mcp.tool()
+
+def get_subnets(project_id: str) -> str:
+
+    """
+
+    Get subnet list.
+
+    """
+
+    cmd = f"""
+
+    gcloud compute networks subnets list
+
+    --project={project_id}
+
+    --format=json
+
+    """
+
+    output = run_cmd(cmd)
+
+    try:
+
+        subnets = json.loads(output)
+
+        formatted = []
+
+        for subnet in subnets:
+
+            formatted.append(
+
+                f"Subnet: {subnet.get('name')} | "
+
+                f"Region: {subnet.get('region').split('/')[-1]} | "
+
+                f"CIDR: {subnet.get('ipCidrRange')}"
+
+            )
+
+        return "\n".join(formatted)
+
+    except Exception as e:
+
+        return str(e)
+    
+
 
 
 if __name__ == "__main__":

@@ -1,6 +1,8 @@
-from sentence_transformers import SentenceTransformer
 import faiss
 import numpy as np
+import sys
+
+embedding_model = None
 
 def get_embedding_model():
 
@@ -10,7 +12,7 @@ def get_embedding_model():
 
         from sentence_transformers import SentenceTransformer
 
-        print("Loading embeddings...", flush=True)
+        print("Loading embeddings...", file=sys.stderr, flush=True)
 
         embedding_model = SentenceTransformer(
             "all-MiniLM-L6-v2"
